@@ -1,66 +1,80 @@
-var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+var data = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
-d3.json(queryUrl).then(function (data) {
-    createFeatures(data.features);
+
+var myMap = L.map("map", {
+    center: [37.09, -95.71],
+    zoom: 5
 });
 
-function createFeatures(quakeData) {
-    function onEachFeature(feature, layer) {
-        layer.bindPopup("<h3> Where: " + feature.properties.place +
-            "</h3><hr><p>" + new Date(feature.properties.time) + "</p>" + "<br><h2> Magnitude: " + feature.properties.mag + "</h2>");
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(myMap);
+
+
+d3.json(data).then(function (data) {
+    function Style(feature) {
+        return {
+            opacity: 1,
+            fillOpacity: 1,
+            fillColor: mapColor(feature.geometry.coordinates[2]),
+            color: "black",
+            radius: mapRadius(feature.properties.mag),
+            stroke: true,
+            weight: 0.5
+        };
+
+
     }
 
-    function createCircleMarker(feature, latlog) {
-        let options = {
-            radius: feature.properties.mag * 5,
-            fillColor: chooseColor(feature.properties.mag),
-            color: choose(feature.properties.mag),
-            weight: 1
-        opacity: 0.8,
-            fill0pacity: 0.35
+    function mapColor(depth) {
+        switch (true) {
+            case depth > 90:
+                return "red";
+            case depth > 70:
+                return "orangered";
+            case depth > 50:
+                return "orange";
+            case depth > 30:
+                return "gold";
+            case depth > 10:
+                return "yellow";
+            default:
+                return "lightgreen";
         }
-        return L.circleMaker(latlog, options);
     }
 
-    let quakes = L.geoJSON(quakeData, {
-        onEachFeature: onEachFeature
-        pointToLayer: createCircleMarker
+    function mapRadius(mag) {
+        if (mag === 0) {
+            return 1;
+        }
+
+        return mag * 4;
+    }
+
+    L.geoJson(data, {
+
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng);
+        },
+
+        style: Style,
+
+        onEachFeature: function (feature, layer) {
+            layer.bindPopup("Magnitude: " + feature.properties.mag + "<br>Location: " + feature.properties.place + "<br>Depth: " + feature.geometry.coordinates[2]);
+
+        }
+    }).addTo(myMap);
+
+    var legend = L.control({ position: "bottomright" });
+    legend.onAdd = function () {
+        var div = L.DomUtil.create("div", "info legend"),
+            depth = [-10, 10, 30, 50, 70, 90];
+
+        for (var i = 0; i < depth.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + mapColor(depth[i] + 1) + '"></i> ' + depth[i] + (depth[i + 1] ? '&ndash;' + depth[i + 1] + '<br>' : '+');
+        }
+        return div;
+    };
+    legend.addTo(myMap)
     });
-
-    createMap(quakes);
-}
-
-function chooseColor(mag) {
-    switch (true) {
-        case (1.0 <= mag && mag <= 2.5):
-            return "#0071BC";
-        case (2.5 <= mag && mag <= 4.0):
-            return "#35BC00";
-        case (4.0 <= mag && mag <= 5.5):
-            return "#BCBC00";
-        case (5.5 <= mag && mag <= 8.0):
-            return "#BC3500";
-        case (8.0 <= mag && mag <= 20.0):
-            return "#BC0000";
-        default:
-            return "#E2FFAE";
-    }
-}
-
-
-let legend = L.control({ position: 'bottomright' });
-
-legend.onAdd = function (map) {
-    let div = L.DomUtil.create('div', 'info legend'),
-        grades = [1.0, 2.5, 4.0, 5.5, 8.0],
-        labels = [];
-
-
-    for (let i = 0; i < grades.length; i++) {
-        div.innerHTML +=
-            '<i style="background:' + chooseColor(grades[i] + 1) + '"></i> ' +
-            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
-    }
-    return div;
-};
-
