@@ -69,10 +69,11 @@ d3.json(data).then(function (data) {
     legend.onAdd = function () {
         var div = L.DomUtil.create("div", "info legend"),
             depth = [-10, 10, 30, 50, 70, 90];
+            let colors = ["light green", "yellow", "gold", "orange", "orangered", "red"];
 
         for (var i = 0; i < depth.length; i++) {
             div.innerHTML +=
-                '<i style="background:' + mapColor(depth[i] + 1) + '"></i> ' + depth[i] + (depth[i + 1] ? '&ndash;' + depth[i + 1] + '<br>' : '+');
+                '<i style="background:' + colors[i] + '"></i> ' + depth[i] + (depth[i + 1] ? '&ndash;' + depth[i + 1] + '<br>' : '+');
         }
         return div;
     };
